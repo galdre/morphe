@@ -4,7 +4,7 @@ Aspect-oriented programming is fundamentally a focus on being able to write code
 
 As a functional language and as a Lisp, Clojure has good tools built-in to tackle this problem, whether via functional composition, higher-order functions, or macros. Let's examine some of those. For a foil, we'll consider the following common use-case: the integration of a [tracing library](https://opentracing.io/).
 
-The requirements are that we need to trace all API endpoints and all major internal operations. It has been determined that the text attached to each trace be of the following format:
+The requirements are that we need to trace all API endpoints and all major internal operations. It has been determined that the label attached to each trace be of the following format:
 
 ```clojure
 (format "%s:%s:%s"
@@ -153,15 +153,15 @@ This is a very common idiom in Clojure code, and it's no wonder. We have done aw
 (defn sum
   "I add numbers together"
   ([x]
-    (with-logging :info "calling api.core/sum"
+    (with-logging :info "calling api.core/sum:[x]"
       (with-tracing "api.core/sum" '[x]
         x)))
   ([x y]
-    (with-logging :info "calling api.core/sum"
+    (with-logging :info "calling api.core/sum:[x y]"
       (with-tracing "api.core/sum" '[x y]
         (+ x y))))
   ([x y & more]
-    (with-logging :info "calling api.core/sum"
+    (with-logging :info "calling api.core/sum:[x y & more]"
       (with-tracing "api.core/sum" '[x y & more]
         (reduce + (sum x y) more)))))
 ```
@@ -205,7 +205,7 @@ That said, in this approach we have given up a nice feature of higher-order func
 
 Once the helper is written, this seems ideal! `sum` will retain its `defn` metadata (assuming the helpers are written correctly), the business logic is now totally unconstrained, and the interruption of the bureaucratic aspect is constrained to a suffix on the `defn`.
 
-But now -- how do you combine these? You can, as I have done, define a function like `defn-traced-and-logged`. This is messy, and simply *cannot* scale when you have many aspects to apply in your system.
+But now -- how do you combine these? You can, as I have done, define a function like `defn-traced-and-logged`. This is messy, and simply does not scale when you have many aspects to apply in your system.
 
 ### morphe
 

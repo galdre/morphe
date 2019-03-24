@@ -40,7 +40,7 @@ Finally, if you think this is all very great, but you want to define aspect-orie
        :decl fdecl}))
 ```
 
-In short, you need to define a **parsing function**, a **writing functions**, and you need to specify how to find the aspects in the parsed form (morphe's parser looks at the `:morphe.core/aspects` keyword in the def'ed symbol's metadata, but you could do whatever you want).
+In short, you need to define a **parsing function** and a **writing function**, and you need to specify how to find the aspects in the parsed form (morphe's parser looks at the `:morphe.core/aspects` keyword in the def'ed symbol's metadata, but you could do whatever you want).
 
 The main benefit, if it is a benefit, to re-using `morphe.impl.core`'s utilities is that it does [what it can](src/morphe/util/cljs.clj) to ensure your new `def` form is Clojurescript-friendly.
 
@@ -63,11 +63,9 @@ I am brand new to Clojurescript and I encountered some interesting issues gettin
 
 As far as I know (I have not tested), morphe will **not** work in self-hosted Clojurescript. I suspect it may not take much work to make that happen, but I have not prioritized looking into this.
 
-The main difficulty in making this work with Clojurescript lies in the fact that the environment compiling the code is completely separate from the environment in which the code will run; more specifically, the Clojure compiler can trivially run any code it is compiling, but the Clojurescript compiler cannot.
-
 ## Project History
 
-This project began in 2016 as a personal library I called `defdef`, a silly experiment in abstracting the creation of all `def` forms. I came up with nothing remotely satisfying until I narrowed my focus to `defn` shims, at which point I realized it seemed very useful indeed. At that point I copied the library into a Clojure project at Workiva, where I developed it further as `defmodfn`, eventually [open-sourcing it](https://github.com/Workiva/morphe). I have since left Workiva, and to my knowledge there is nobody there with a desire to maintain the library, so now it lives here.
+This project began in 2016 as a personal library I called `defdef`, a silly experiment in abstracting the creation of all `def` forms. I came up with nothing remotely satisfying until I narrowed my focus to `defn` modifiers, at which point I realized it seemed very useful indeed. At that point I copied the library into a Clojure project at Workiva, where I developed it further as `defmodfn`, eventually open-sourcing it under [the current name](https://github.com/Workiva/morphe). I have since left Workiva, and that library is unmaintained, so now it lives here.
 
 ## Contributing
 

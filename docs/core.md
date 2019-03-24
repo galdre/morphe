@@ -2,9 +2,9 @@
 
 ## How does it work?
 
-In Clojure's grammar, `defn` forms have many optional and variadic terms. The main work of [`defn`](https://github.com/clojure/clojure/blob/clojure-1.9.0-alpha14/src/clj/clojure/core.clj#L283) is to parse the body of the macro, extracting all these terms; in the end its job is simply to write these out in a more restricted form to be compiled.
+In Clojure's grammar, `defn` forms have many optional and variadic terms (metadata, docstrings, single-arity vs. multi-arity structure, etc.). The main work of [`defn`](https://github.com/clojure/clojure/blob/clojure-1.9.0-alpha14/src/clj/clojure/core.clj#L283) is to parse the body of the macro, extracting all these terms; afterward its job is simply to write these out in a more restricted form to be compiled.
 
-`morphe` works by forking `clojure.core/defn`, splitting it into its two fundamental components: the parser and writer. The new parser outputs a `FnDef` record which is consumed by the writer. But between being parsed and being compiled, this record can easily be examined and/or modified by *aspect-defining* functions.
+`morphe` works by forking `clojure.core/defn`, splitting it into these two fundamental components: the parser and writer. The forked parser outputs a `FnDef` record which is consumed by the writer. But between being parsed and being compiled, this record can easily be examined and/or modified by *aspect-defining* functions.
 
 ```Clojure
 #_=> (defn spied [fn-def] (m/alter-bodies fn-def `(let [r# (do ~@&body)] (println r#) r#)))
@@ -19,9 +19,9 @@ true
 
 In the example above, `^{::m/aspects [...]}` tells Clojure's [reader](https://clojure.org/reference/reader) to attach a map of metadata to a symbol. `morphe.core/defn` parses the function definition as normal, then examines the symbol's metadata to determine which aspects it is tagged with. This is all standard Clojure stuff.
 
-Morphe then reduces the tagged aspect functions over the parsed form (in this case, just `spied`). Once all such tags have been applied, the result is passed along to the writer, just as `clojure.core/defn` implicitly would have done.
+Morphe then exploits the fact that the compiler itself is a Clojure process, and reduces the tagged aspect functions over the parsed form (in this case, just `spied`). Once all such tags have been applied, the result is passed along to the writer, just as `clojure.core/defn` implicitly would have done.
 
-It is fairly straightforward to modify the FnDef record directly. But `morphe.core` provides a number of conveniences to make writing common aspect transformations as simple as possible; for example, wrapping the whole definition (perhaps in the body of a `let`), or prefixing every body of the function (perhaps with generated log statements). For instance, defining a simple trace-level logging transformation is easy:
+It is fairly straightforward to modify the `FnDef` record directly. But `morphe.core` provides a number of conveniences to make writing common aspect transformations as simple as possible; examples include wrapping the whole definition (perhaps in the body of a `let`), or prefixing every body of the function (perhaps with generated log statements). Let us consider in more depth the definition of a simple trace-level logging transformation:
 
 ```clojure
 (defn traced
@@ -59,7 +59,7 @@ Clojure's `defmacro` is an [anaphoric macro](https://en.wikipedia.org/wiki/Anaph
 
 Morphe's convenience utilities are also anaphoric macros. Depending on the utility, some of the following variables are available:
 
-- `&ns`: the namespace in which the aspect-modified function is being run.
+- `&ns`: the namespace in which the aspect-modified function is being defined.
 - `&name`: the unqualified name given to the function.
 - `&env-keys`: the *keyset* of the `&env` map as seen by the `morphe.core/defn` macro itself (i.e., set of symbols bound in a local scope)
 - `&meta`: the metadata with which the function has been tagged
@@ -69,7 +69,7 @@ Morphe's convenience utilities are also anaphoric macros. Depending on the utili
 
 #### `defn`
 
-A drop-in replacement for Clojure's `defn`. In the simple case, the two should be indistinguishable. But you can tag the fn-name with metadata, under the keyword `:morphe.core/aspects`, to trigger the application of aspects. `morphe.core/defn` first calls `parse-defn`, then applies the tagged aspects in order, then calls `fn-def=>defn`.
+A drop-in replacement for Clojure's `defn`. In the simple case, the two should be indistinguishable. But you can tag the fn-name with metadata, under the keyword `:morphe.core/aspects`, to trigger the application of aspects.
 
 #### `prefix-form: [fn-def expression]`
 
@@ -187,7 +187,7 @@ Now suppose you want to time a function.
         (d/alter-form `(let [~timer (metrics/timer ~(format "Timer for the function: %s"
                                                            (symbol (str &ns) &name)))]
                         (metrics/register metrics/DEFAULT ~[(str &ns) (str &name) "timer"])
-                        ~@&form))
+                        ~&form))
         (d/alter-bodies `(metrics/with-timer ~timer ~@&body)))))
 
 ;; Let's use it:
