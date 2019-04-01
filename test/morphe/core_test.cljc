@@ -130,8 +130,10 @@
     (let [result-1 (alter-bodies-anaphores-fn 1)
           result-2 (alter-bodies-anaphores-fn 1 2)]
       (t/is (= (:params result-1)
+               (:arglist result-1)
                '[x]))
       (t/is (= (:params result-2)
+               (:arglist result-2)
                '[x y]))
       (t/is (= (:body result-1)
                '((inc x))))
