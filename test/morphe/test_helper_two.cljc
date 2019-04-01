@@ -5,7 +5,7 @@
 (defn logged
   [fn-def]
   (m/prefix-bodies fn-def
-    `(reset! three/some-atom ~&params)))
+    `(reset! three/some-atom ~&arglist)))
 
 (defn flogged
   [f]

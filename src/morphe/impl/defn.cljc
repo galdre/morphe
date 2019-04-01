@@ -158,7 +158,8 @@
    (defn- ->anaphoric-binding
      ([fn-def anaphore]
       (assert (not (or (= anaphore '&body)
-                       (= anaphore '&params))))
+                       (= anaphore '&params) ;; TODO: remove at 2.0.0
+                       (= anaphore '&arglist))))
       (->anaphoric-binding fn-def nil nil anaphore))
      ([fn-def params anaphore]
       (assert (not (= anaphore '&body)))
@@ -167,7 +168,8 @@
       [anaphore
        (condp = anaphore
          '&body body
-         '&params params
+         '&params params ;; TODO: remove at 2.0.0
+         '&arglist params
          '&ns `(:namespace ~fn-def)
          '&name `(:fn-name ~fn-def)
          '&meta `(:metadata ~fn-def)
@@ -225,7 +227,8 @@
      (let [sym:params (gensym 'params)
            sym:body (gensym 'body)
            sym:fn-def (gensym 'fn-def)
-           anaphores '#{&params &body &ns &name &meta &env-keys}
+           anaphores '#{&params ;; TODO: remove at 2.0.0
+                        &arglist &body &ns &name &meta &env-keys}
            expression-fn `(fn ~[sym:params sym:body]
                             (list ~(->> expression
                                         (anaphoric-scope sym:fn-def sym:params sym:body anaphores))))]
@@ -246,7 +249,8 @@
      [fn-def expression]
      (let [sym:params (gensym 'params)
            sym:fn-def (gensym 'fn-def)
-           anaphores '#{&params &ns &name &meta &env-keys}
+           anaphores '#{&params ;; TODO: remove at 2.0.0
+                        &arglist &ns &name &meta &env-keys}
            expression-fn `(fn ~[sym:params]
                             ~(->> expression
                                   (anaphoric-scope sym:fn-def sym:params anaphores)))]

@@ -79,7 +79,7 @@
 (defmacro alter-bodies
   "Allows specification of code that should wrap each body of the `defn`
   form. Provides:
-    * &params - The paramaters corresponding to this arity.
+    * &arglist - The paramaters corresponding to this arity.
     * &body - The collection of expressions in the body of this arity.
     * &ns - The namespace in which this fn is being interned
     * &name - The symbol used to name this defn.
@@ -88,7 +88,7 @@
   NOTA BENE: &body is an *ordered collection* of valid expressions.
   Example:
   (alter-bodies fn-def
-                `(binding [*scope* ~[(ns-name &ns) &name &params]]
+                `(binding [*scope* ~[(ns-name &ns) &name &arglist]]
                    ~@&body))"
   {:style/indent 1}
   [fn-def expression]
@@ -104,7 +104,7 @@
 (defmacro prefix-bodies
   "Allows the specification of an expression that will be added to the beginning
   of each fn arity (presumably for side-effects). Provides:
-    * &params - The paramaters corresponding to this arity.
+    * &arglist - The paramaters corresponding to this arity.
     * &ns - The namespace in which this fn is being interned
     * &name - The symbol used to name this defn.
     * &meta - The metadata attached to the fn name.
