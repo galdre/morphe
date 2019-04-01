@@ -104,7 +104,8 @@
 (defn alter-bodies-phores
   [fn-def]
   (m/alter-bodies fn-def
-    `{:params '~&params
+    `{:params '~&params ;; TODO: remove at 2.0.0
+      :arglist '~&arglist
       :body '~&body
       :ns '~(ns-name &ns)
       :name '~&name

@@ -30,7 +30,7 @@ It is fairly straightforward to modify the `FnDef` record directly. But `morphe.
   [fn-def]
   (m/prefix-bodies fn-def
                    `(log/trace "calling function: "
-                               ~(format "%s/%s:%s" (ns-name &ns) &name &params)))))
+                               ~(format "%s/%s:%s" (ns-name &ns) &name &arglist)))))
 ```
 This is equivalent to the following method, which does not use any convenience functions and instead modifies the `FnDef` record directly:
 
@@ -63,7 +63,7 @@ Morphe's convenience utilities are also anaphoric macros. Depending on the utili
 - `&name`: the unqualified name given to the function.
 - `&env-keys`: the *keyset* of the `&env` map as seen by the `morphe.core/defn` macro itself (i.e., set of symbols bound in a local scope)
 - `&meta`: the metadata with which the function has been tagged
-- `&params`: the paramaters vector for *a particular* arity of the function.
+- `&arglist`: the paramaters vector for *a particular* arity of the function.
 - `&body`: the collection of expression(s) constituting *a particular* arity of the function.
 - `&form`: an *uninspectable* representation of the collection of expressions for the entire function declaration; useful to wrap the whole `defn` with a lexical scope.
 
@@ -98,9 +98,9 @@ Example:
 
 #### `prefix-bodies: [fn-def expression]`
 
-Anaphoric macro, providing `&ns`, `&name`, `&env-keys`, `&meta`, and `&params`.
+Anaphoric macro, providing `&ns`, `&name`, `&env-keys`, `&meta`, and `&arglist`.
 
-This will prefix each body of the function with the provided expression. `&params` will evaluate to the parameter list corresponding to each body.
+This will prefix each body of the function with the provided expression. `&arglist` will evaluate to the parameter list corresponding to each body.
 
 Example:
 
@@ -108,14 +108,14 @@ Example:
 (prefix-bodies fn-def
                `(assert (even? 4)
                         (format "Math still works in the %s arity."
-                                '~&params)))
+                                '~&arglist)))
 ```
 
 #### `alter-bodies: [fn-def expression]`
 
-Anaphoric macro, providing `&ns`, `&name`, `&env-keys`, `&meta`, `&params`, and `&body`.
+Anaphoric macro, providing `&ns`, `&name`, `&env-keys`, `&meta`, `&arglist`, and `&body`.
 
-For each arity of the function, this *replaces* the clauses with the given expression; `&params` and `&body` are bound appropriately for each arity, and `&body` is assumed to be a *sequence of valid expressions*, not a single valid expression. Typically used for wrapping each body somehow.
+For each arity of the function, this *replaces* the clauses with the given expression; `&arglist` and `&body` are bound appropriately for each arity, and `&body` is assumed to be a *sequence of valid expressions*, not a single valid expression. Typically used for wrapping each body somehow.
 
 Example:
 
@@ -123,7 +123,7 @@ Example:
 (alter-bodies fn-def
              `(binding [*some-scope* ~{:ns &ns,
                                        :sym &name,
-                                       :arity &params}]
+                                       :arity &arglist}]
                 ~@&body))
 ```
 
@@ -147,7 +147,7 @@ Let's say you want to log every time a method is called, along with the arity. U
                           level
                           &ns
                           &name
-                          &params))))))
+                          &arglist))))))
 
 ;; Now let's use it:
 (m/defn ^{::m/aspects [(logged :debug)]}
@@ -284,7 +284,7 @@ Aspects are applied in composition order (right to left). Change the aspects' or
 
 ### Macrotic Transformations
 
-In the examples so far, similar effects could be achieved via (possibly clunky) functional composition (see morphe's utilities for such [here](functional.md)). There are some limitations: the automatic exposure of `&name` or `&params` is not possible via purely functional means. But the fact that we are operating on the function's *code* rather than the function itself does allow even more interesting transformations one could not effect purely functionally. Consider this funny little example I once used in practice (observe carefully how some of the code gets restructured in the second arity):
+In the examples so far, similar effects could be achieved via (possibly clunky) functional composition (see morphe's utilities for such [here](functional.md)). There are some limitations: the automatic exposure of `&name` or `&arglist` is not possible via purely functional means. But the fact that we are operating on the function's *code* rather than the function itself does allow even more interesting transformations one could not effect purely functionally. Consider this funny little example I once used in practice (observe carefully how some of the code gets restructured in the second arity):
 
 ```clojure
 (m/defn ^{::m/aspects [(synchronize-on state #{pojo-1 pojo-2})]}
