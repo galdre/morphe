@@ -79,4 +79,4 @@ Guidelines:
  * tests where appropriate
 
 #### Maintainers
-- Timothy Dean <[galdre@gmail.com](mailto:galdre@gmail.com)>
+- Timothy Dean <[galdre@galdorcraeft.com](mailto:galdre@galdorcraeft.com)>
