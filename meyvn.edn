@@ -1,0 +1,11 @@
+{:pom
+ {:group-id "galdre",
+  :artifact-id "morphe",
+  :version "1.1.0",
+  :name "morphe"},
+ :packaging
+ {:jar
+  {:enabled true,
+   :remote-repository
+   {:id "clojars", :url "https://clojars.org/repo"}}},
+ :scm {:enabled true}}
