@@ -11,7 +11,8 @@ Morphe is a Clojure(script) library for writing [aspect-oriented code](https://e
 If you are new to the concept of AOP, read [this walkthrough](docs/rationale.md) of a motivating example. If, on the other hand, you wonder when or why you might want to use this library rather than any number of perfectly reasonable and common Clojure idioms, read [this comparison](docs/clojure-idioms.md). Unlike the excellent [Robert Hooke](https://github.com/technomancy/robert-hooke) library, morphe does not enable dynamic modifications to functions, attaching and unattaching advice; here, aspects are statically applied at compile time.
 
 ```clojure
-(m/defn ^{::m/aspects [timed (logged :info) traced]} do-a-thing
+^{::m/aspects [timed (logged :info) traced]}
+(m/defn do-a-thing
   "do-a-thing has nice documentation, obviously"
   [pojo stuff]
   (.doThatThing pojo stuff))

@@ -225,7 +225,8 @@ But now -- how do you combine these? You can, as I have done, define a function 
          return#))))
 
 ;; Begin business logic:
-(m/defn ^{::m/aspects [traced]} sum
+^{::m/aspects [traced]}
+(m/defn sum
   "I add numbers together"
   ([x] x)
   ([x y] (+ x y))

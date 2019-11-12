@@ -38,6 +38,11 @@
 ;;;;;;;;;;;;;;;;;;;;
 ;; BASIC TEST FNS ;;
 
+^{::m/aspects [(prefix-spied "prefix")]}
+(m/defn alter-bodies-fn-2
+  ([x] (inc x))
+  ([x y] (+ x y)))
+
 (m/defn ^{::m/aspects [(prefix-spied "prefix")]}
   alter-bodies-fn
   ([x] (inc x))
@@ -49,8 +54,18 @@
   ([x] (dec x))
   ([x y] (- x y)))
 
+(def counter-2 (atom 0))
+^{::m/aspects [(counted `counter-2)]}
+(m/defn prefix-bodies-fn-2
+  ([x] (dec x))
+  ([x y] (- x y)))
+
 (m/defn ^{::m/aspects [anaphored]}
   alter-form-fn [x]
+  (vector anaphore x))
+
+^{::m/aspects [anaphored]}
+(m/defn alter-form-fn-2 [x]
   (vector anaphore x))
 
 (def registry (atom #{}))
@@ -58,31 +73,59 @@
   prefix-form-fn [x]
   (pr-str x))
 
+(def registry-2 (atom #{}))
+^{::m/aspects [(registered `registry-2)]}
+(m/defn prefix-form-fn-2 [x]
+  (pr-str x))
+
 ;;;;;;;;;;;;;;;;;
 ;; BASIC TESTS ;;
 
 (t/deftest alter-bodies-test
-  (t/is (= 6 (alter-bodies-fn 5)))
-  (t/is (= "prefix: 6\n"
-           (with-out-str
-             (alter-bodies-fn 5))))
-  (t/is (= 10 (alter-bodies-fn 7 3)))
-  (t/is (= "prefix: 10\n"
-           (with-out-str
-             (alter-bodies-fn 7 3)))))
+  (t/testing "Legacy-style aspect tagging"
+    (t/is (= 6 (alter-bodies-fn 5)))
+    (t/is (= "prefix: 6\n"
+             (with-out-str
+               (alter-bodies-fn 5))))
+    (t/is (= 10 (alter-bodies-fn 7 3)))
+    (t/is (= "prefix: 10\n"
+             (with-out-str
+               (alter-bodies-fn 7 3)))))
+  (t/testing "Annotation-style aspect tagging"
+    (t/is (= 6 (alter-bodies-fn-2 5)))
+    (t/is (= "prefix: 6\n"
+             (with-out-str
+               (alter-bodies-fn-2 5))))
+    (t/is (= 10 (alter-bodies-fn-2 7 3)))
+    (t/is (= "prefix: 10\n"
+             (with-out-str
+               (alter-bodies-fn-2 7 3))))))
 
 (t/deftest prefix-bodies-test
-  (let [count-at-start @counter]
-    (t/is (= 2 (prefix-bodies-fn 3)))
-    (t/is (= -13 (prefix-bodies-fn 7 20)))
-    (t/is (= (+ 2 count-at-start) @counter))))
+  (t/testing "Legacy-style aspect tagging"
+    (let [count-at-start @counter]
+      (t/is (= 2 (prefix-bodies-fn 3)))
+      (t/is (= -13 (prefix-bodies-fn 7 20)))
+      (t/is (= (+ 2 count-at-start) @counter))))
+  (t/testing "Annotation-style aspect tagging"
+    (let [count-at-start @counter-2]
+      (t/is (= 2 (prefix-bodies-fn-2 3)))
+      (t/is (= -13 (prefix-bodies-fn-2 7 20)))
+      (t/is (= (+ 2 count-at-start) @counter-2)))))
 
 (t/deftest alter-form-test
-  (t/is (= [::anaphore ::goofy]
-           (alter-form-fn ::goofy))))
+  (t/testing "Legacy-style aspect tagging"
+    (t/is (= [::anaphore ::goofy]
+             (alter-form-fn ::goofy))))
+  (t/testing "Annotation-style aspect tagging"
+    (t/is (= [::anaphore ::goofy]
+             (alter-form-fn-2 ::goofy)))))
 
 (t/deftest prefix-form-test
-  (t/is (= @registry '#{prefix-form-fn})))
+  (t/testing "Legacy-style aspect tagging"
+    (t/is (= @registry '#{prefix-form-fn})))
+  (t/testing "Annotation-style aspect tagging"
+    (t/is (= @registry-2 '#{prefix-form-fn-2}))))
 
 ;;;;;;;;;;;;;;;
 ;; ANAPHORES ;;
@@ -101,6 +144,11 @@
   (m/defn ^{::m/aspects [alter-form-phores]}
     alter-form-anaphores-fn [x] (inc x)))
 
+(let [bizarro 3]
+   ^{::m/aspects [alter-form-phores]}
+  (m/defn alter-form-anaphores-fn-2 [x]
+    (inc x)))
+
 (defn alter-bodies-phores
   [fn-def]
   (m/alter-bodies fn-def
@@ -116,48 +164,97 @@
   (m/defn ^{::m/aspects [alter-bodies-phores]}
     alter-bodies-anaphores-fn "something" ([x] (inc x)) ([x y] (+ x y))))
 
+(let [extremo 10]
+  ^{::m/aspects [alter-bodies-phores]}
+  (m/defn alter-bodies-anaphores-fn-2
+    "something"
+    ([x] (inc x)) ([x y] (+ x y))))
+
 (t/deftest anaphores-test
-  (t/testing "alter-form anaphores"
-    (let [{:keys [ns name env-keys meta form]} (alter-form-anaphores-fn)]
-      (t/is (= ns 'morphe.core-test))
-      (t/is (= name 'alter-form-anaphores-fn))
-      (t/is (= env-keys #?(:clj '#{bizarro}
-                           :cljs #{:fn-scope :locals :js-globals :ns :column :line :context})))
-      (t/is #?(:clj (= meta '{:arglists ([x])})
-               :cljs (= '([x]) (:arglists meta))))
-      (t/is (some? form))))
-  (t/testing "alter-bodies anaphores"
-    (let [result-1 (alter-bodies-anaphores-fn 1)
-          result-2 (alter-bodies-anaphores-fn 1 2)]
-      (t/is (= (:params result-1)
-               (:arglist result-1)
-               '[x]))
-      (t/is (= (:params result-2)
-               (:arglist result-2)
-               '[x y]))
-      (t/is (= (:body result-1)
-               '((inc x))))
-      (t/is (= (:body result-2)
-               '((+ x y))))
-      (t/is (= (:ns result-1)
-               (:ns result-2)
-               'morphe.core-test))
-      (t/is (= (:name result-1)
-               (:name result-2)
-               'alter-bodies-anaphores-fn))
-      (t/is #?(:clj (= (:meta result-1)
-                       (:meta result-2)
-                       '{:arglists ([x] [x y])
-                         :doc "something"})
-               :cljs (and
-                      (= (:meta result-1)
-                         (:meta result-2))
-                      (= '([x] [x y])
-                         (:arglists (:meta result-1))))))
-      (t/is (= (:env-keys result-1)
-               (:env-keys result-2)
-               #?(:clj '#{extremo}
-                  :cljs #{:fn-scope :locals :js-globals :ns :column :line :context}))))))
+  (t/testing "Legacy-style aspect tagging"
+    (t/testing "alter-form anaphores"
+      (let [{:keys [ns name env-keys meta form]} (alter-form-anaphores-fn)]
+        (t/is (= ns 'morphe.core-test))
+        (t/is (= name 'alter-form-anaphores-fn))
+        (t/is (= env-keys #?(:clj '#{bizarro}
+                             :cljs #{:fn-scope :locals :js-globals :ns :column :line :context})))
+        (t/is #?(:clj (= meta '{:arglists ([x])})
+                 :cljs (= '([x]) (:arglists meta))))
+        (t/is (some? form))))
+    (t/testing "alter-bodies anaphores"
+      (let [result-1 (alter-bodies-anaphores-fn 1)
+            result-2 (alter-bodies-anaphores-fn 1 2)]
+        (t/is (= (:params result-1)
+                 (:arglist result-1)
+                 '[x]))
+        (t/is (= (:params result-2)
+                 (:arglist result-2)
+                 '[x y]))
+        (t/is (= (:body result-1)
+                 '((inc x))))
+        (t/is (= (:body result-2)
+                 '((+ x y))))
+        (t/is (= (:ns result-1)
+                 (:ns result-2)
+                 'morphe.core-test))
+        (t/is (= (:name result-1)
+                 (:name result-2)
+                 'alter-bodies-anaphores-fn))
+        (t/is #?(:clj (= (:meta result-1)
+                         (:meta result-2)
+                         '{:arglists ([x] [x y])
+                           :doc "something"})
+                 :cljs (and
+                        (= (:meta result-1)
+                           (:meta result-2))
+                        (= '([x] [x y])
+                           (:arglists (:meta result-1))))))
+        (t/is (= (:env-keys result-1)
+                 (:env-keys result-2)
+                 #?(:clj '#{extremo}
+                    :cljs #{:fn-scope :locals :js-globals :ns :column :line :context}))))))
+  (t/testing "Annotation-style aspect tagging"
+    (t/testing "alter-form anaphores"
+      (let [{:keys [ns name env-keys meta form]} (alter-form-anaphores-fn-2)]
+        (t/is (= ns 'morphe.core-test))
+        (t/is (= name 'alter-form-anaphores-fn-2))
+        (t/is (= env-keys #?(:clj '#{bizarro}
+                             :cljs #{:fn-scope :locals :js-globals :ns :column :line :context})))
+        (t/is #?(:clj (= meta '{:arglists ([x])})
+                 :cljs (= '([x]) (:arglists meta))))
+        (t/is (some? form))))
+    (t/testing "alter-bodies anaphores"
+      (let [result-1 (alter-bodies-anaphores-fn-2 1)
+            result-2 (alter-bodies-anaphores-fn-2 1 2)]
+        (t/is (= (:params result-1)
+                 (:arglist result-1)
+                 '[x]))
+        (t/is (= (:params result-2)
+                 (:arglist result-2)
+                 '[x y]))
+        (t/is (= (:body result-1)
+                 '((inc x))))
+        (t/is (= (:body result-2)
+                 '((+ x y))))
+        (t/is (= (:ns result-1)
+                 (:ns result-2)
+                 'morphe.core-test))
+        (t/is (= (:name result-1)
+                 (:name result-2)
+                 'alter-bodies-anaphores-fn-2))
+        (t/is #?(:clj (= (:meta result-1)
+                         (:meta result-2)
+                         '{:arglists ([x] [x y])
+                           :doc "something"})
+                 :cljs (and
+                        (= (:meta result-1)
+                           (:meta result-2))
+                        (= '([x] [x y])
+                           (:arglists (:meta result-1))))))
+        (t/is (= (:env-keys result-1)
+                 (:env-keys result-2)
+                 #?(:clj '#{extremo}
+                    :cljs #{:fn-scope :locals :js-globals :ns :column :line :context})))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ORDERING OF COMPOSITION ;;
@@ -171,19 +268,34 @@
 (m/defn ^{::m/aspects [(constantly* 1) (constantly* 2)]}
   always-one [x] (* x 2))
 
+^{::m/aspects [(constantly* 1) (constantly* 2)]}
+(m/defn always-one-2 [x] (* x 2))
+
 (m/defn ^{::m/aspects [(constantly* 2) (constantly* 1)]}
   always-two [x] (+ x 2))
 
+^{::m/aspects [(constantly* 2) (constantly* 1)]}
+(m/defn always-two-2 [x] (+ x 2))
+
 (t/deftest test-ordering-of-composition
-  (t/is (= 1 (always-one 10)))
-  (t/is (= 2 (always-two 100))))
+  (t/testing "Legacy-style aspect tagging"
+    (t/is (= 1 (always-one 10)))
+    (t/is (= 2 (always-two 100))))
+  (t/testing "Annotation-style aspect tagging"
+    (t/is (= 1 (always-one-2 10)))
+    (t/is (= 2 (always-two-2 100)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CROSS NAMESPACE RESOLUTION ;;
 
 (t/deftest test-cross-namespace-resolution
-  (t/is (= 100 (one/logged-fn 10)))
-  (t/is (= '[10] @three/some-atom))
-  (t/is (= 56 (one/logged-fn 8 7)))
-  (t/is (= '[8 7] @three/some-atom)))
-
+  (t/testing "Legacy-style aspect tagging"
+    (t/is (= 100 (one/logged-fn 10)))
+    (t/is (= '[10] @three/some-atom))
+    (t/is (= 56 (one/logged-fn 8 7)))
+    (t/is (= '[8 7] @three/some-atom)))
+  (t/testing "Annotation-style aspect tagging"
+    (t/is (= 100 (one/logged-fn-2 10)))
+    (t/is (= '[10] @three/some-atom))
+    (t/is (= 56 (one/logged-fn-2 8 7)))
+    (t/is (= '[8 7] @three/some-atom))))

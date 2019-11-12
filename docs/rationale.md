@@ -79,7 +79,7 @@ That, of course, is ridiculous, and assumes there would be no more cross-cutting
 The key to solving our problem once and for all was to recognize that these were all _completely independent_ [aspects](https://en.wikipedia.org/wiki/Aspect-oriented_programming) of a function definition. None of the manual transformations depended on any of the others. Thus was born `morphe`. Our one-liner could once again be a one-liner:
 
 ```clojure
-(m/defn ^{::m/aspects [timed logged traced]} do-a-thing [x stuff] (.doThatThing x stuff))
+^{::m/aspects [timed logged traced]} (m/defn do-a-thing [x stuff] (.doThatThing x stuff))
 ```
 
 In case you are skeptical as to how this solves any problem in the first place, remember that the best known predictor of bug count in a code base is the *size* of the code base. This library has a number of potential applications, but the easiest all involve removing boilerplate.
