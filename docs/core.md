@@ -17,9 +17,16 @@ true
 true
 ```
 
-In the example above, `^{::m/aspects [...]}` tells Clojure's [reader](https://clojure.org/reference/reader) to attach a map of metadata to a symbol. `morphe.core/defn` parses the function definition as normal, then examines the symbol's metadata to determine which aspects it is tagged with. This is all standard Clojure stuff.
+In the example above, `^{::m/aspects [...]}` tells Clojure's [reader](https://clojure.org/reference/reader) to attach a map of metadata to a symbol. `morphe.core/defn` parses the function definition as normal, then examines the symbol's metadata to determine which aspects it is tagged with. This is all standard Clojure stuff. As an aside, an alternate style is available that is preferable in a source file:
 
-Morphe then exploits the fact that the compiler itself is a Clojure process, and reduces the tagged aspect functions over the parsed form (in this case, just `spied`). Once all such tags have been applied, the result is passed along to the writer, just as `clojure.core/defn` implicitly would have done.
+```clojure
+;; The metadata map immediately precedes the `defn` block.
+
+^{::m/aspects [spied]}
+(m/defn foo ([x] (inc x)) ([x y] (+ x y)))
+```
+
+In any case, Morphe then exploits the fact that the compiler itself is a Clojure process, and reduces the tagged aspect functions over the parsed form (in this case, just `spied`). Once all such tags have been applied, the result is passed along to the writer, just as `clojure.core/defn` implicitly would have done.
 
 It is fairly straightforward to modify the `FnDef` record directly. But `morphe.core` provides a number of conveniences to make writing common aspect transformations as simple as possible; examples include wrapping the whole definition (perhaps in the body of a `let`), or prefixing every body of the function (perhaps with generated log statements). Let us consider in more depth the definition of a simple trace-level logging transformation:
 
@@ -150,8 +157,9 @@ Let's say you want to log every time a method is called, along with the arity. U
                           &arglist))))))
 
 ;; Now let's use it:
-(m/defn ^{::m/aspects [(logged :debug)]}
-        my-logged-fn
+
+^{::m/aspects [(logged :debug)]}
+(m/defn my-logged-fn
   ([x] x)
   ([x y] (+ x y))
   ([x y z] (+ x y z))
@@ -191,8 +199,9 @@ Now suppose you want to time a function.
         (d/alter-bodies `(metrics/with-timer ~timer ~@&body)))))
 
 ;; Let's use it:
-(m/defn ^{::m/aspects [timed]}
-        my-timed-fn
+
+^{::m/aspects [timed]}
+(m/defn my-timed-fn
   ([x] x)
   ([x y] (+ x y))
   ([x y z] (+ x y z))
@@ -221,8 +230,8 @@ Now suppose you want to time a function.
 Let's do both.
 
 ```clojure
-(m/defn ^{::m/aspects [timed (logged :debug)]}
-        my-amazing-fn
+^{::m/aspects [timed (logged :debug)]}
+(m/defn my-amazing-fn
   ([x] x)
   ([x y] (+ x y))
   ([x y z] (+ x y z))
@@ -253,8 +262,8 @@ Let's do both.
 Aspects are applied in composition order (right to left). Change the aspects' order in the tagged vector, and you change the order of application:
 
 ```clojure
-(m/defn ^{::m/aspects [(logged :debug) timed]}
-        my-amazing-fn
+^{::m/aspects [(logged :debug) timed]}
+(m/defn my-amazing-fn
   ([x] x)
   ([x y] (+ x y))
   ([x y z] (+ x y z))
@@ -287,8 +296,8 @@ Aspects are applied in composition order (right to left). Change the aspects' or
 In the examples so far, similar effects could be achieved via (possibly clunky) functional composition (see morphe's utilities for such [here](functional.md)). There are some limitations: the automatic exposure of `&name` or `&arglist` is not possible via purely functional means. But the fact that we are operating on the function's *code* rather than the function itself does allow even more interesting transformations one could not effect purely functionally. Consider this funny little example I once used in practice (observe carefully how some of the code gets restructured in the second arity):
 
 ```clojure
-(m/defn ^{::m/aspects [(synchronize-on state #{pojo-1 pojo-2})]}
-        safely-update-then-calculate
+^{::m/aspects [(synchronize-on state #{pojo-1 pojo-2})]}
+(m/defn safely-update-then-calculate
   ([state pojo-1]
     (when-let [x (.inspect pojo-1)]
       (.update pojo-1 (:one @state))
