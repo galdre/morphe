@@ -116,7 +116,10 @@
                  m))
            m (conj (if (meta name) (meta name) {}) m)
            params (map first fdecl)
-           bodies (map rest fdecl)]
+           bodies (map rest fdecl)
+           annotation-style-aspects (-> &form meta :morphe.core/aspects)
+           legacy-style-aspects (:morphe.core/aspects m)
+           all-aspects (concat annotation-style-aspects legacy-style-aspects)]
        (map->ParsedFnDef {:wrapper `(do ::form)
                           :env &env
                           :namespace *ns*
@@ -124,7 +127,7 @@
                           :fn-name name
                           :arglists params
                           :bodies bodies
-                          :aspects (:morphe.core/aspects m)}))))
+                          :aspects all-aspects}))))
 
 #?(:clj
    (defn- hof-it [expr hof] `(~hof ~expr)))
