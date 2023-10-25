@@ -6,7 +6,7 @@
 
 [![Clojars Project](https://img.shields.io/clojars/v/galdre/morphe.svg)](https://clojars.org/galdre/morphe)
 
-Morphe is a Clojure(script) library for writing [aspect-oriented code](https://en.wikipedia.org/wiki/Aspect-oriented_programming) without compromising on other language features (such as function metadata), by fully exploiting Lisp's "code as data" philosophy.
+Morphe is a Clojure(script) library for writing [aspect-oriented code](https://en.wikipedia.org/wiki/Aspect-oriented_programming) without compromising on other language features (such as function metadata), by fully exploiting Lisp's "code as data" philosophy. It should be fully compatible with Clojure 1.11's map destructuring [changes](https://github.com/clojure/clojure/commit/3c9307e27479d450e3f1cdf7903458b83ebf52d7) in fn args.
 
 If you are new to the concept of AOP, read [this walkthrough](docs/rationale.md) of a motivating example. If, on the other hand, you wonder when or why you might want to use this library rather than any number of perfectly reasonable and common Clojure idioms, read [this comparison](docs/clojure-idioms.md). Unlike the excellent [Robert Hooke](https://github.com/technomancy/robert-hooke) library, morphe does not enable dynamic modifications to functions, attaching and unattaching advice; here, aspects are statically applied at compile time.
 
