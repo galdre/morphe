@@ -33,6 +33,19 @@
 ;; probably you're misusing the aspect constructors anyway.
 (def special-forms '#{quote do def fn if let var loop recur try throw new set! .})
 
+(defn- clojure-ns-of
+  "The namespace whose Clojure variant defines SYM, as read in CLJS-NS, or nil."
+  [sym cljs-ns]
+  (let [this-ns (get-in @env/*compiler* [::ana/namespaces cljs-ns])]
+    (if-let [ns (some-> (namespace sym) symbol)]
+      ;; namespaced, either in full or by alias:
+      (if (= 'clojure.core ns) ns (get-in this-ns [:requires ns]))
+      (if (anapi/ns-resolve cljs-ns sym)
+        ;; it's in the namespace currently being compiled:
+        cljs-ns
+        ;; presumably it's referred into this ns:
+        (get-in this-ns [:uses sym])))))
+
 (defn resolve-from-cljs
   ([sym ignoring] (resolve-from-cljs sym ignoring ana/*cljs-ns*))
   ([sym ignoring cljs-ns]
@@ -40,25 +53,8 @@
            (contains? ignoring sym))
      sym
      ;; A var can hold nil or false, so test the var, not its value:
-     (if-let [v (if (simple-symbol? sym)
-                  (if-let [anavar (anapi/ns-resolve cljs-ns sym)]
-                    ;; It's in the namespace currently being compiled:
-                    (find-clojure-var cljs-ns sym)
-                    ;; Presumably it's referred into this ns:
-                    (when-let [ns (get-in @env/*compiler* [::ana/namespaces
-                                                           cljs-ns
-                                                           :uses
-                                                           sym])]
-                      (find-clojure-var ns sym)))
-                  ;; it's namespaced, either in full or by alias:
-                  (let [ns (symbol (namespace sym))
-                        n (symbol (name sym))
-                        ns-full (or ('#{clojure.core} ns)
-                                    (get-in @env/*compiler* [::ana/namespaces
-                                                             cljs-ns
-                                                             :requires
-                                                             ns]))]
-                    (find-clojure-var ns-full n)))]
+     (if-let [v (some-> (clojure-ns-of sym cljs-ns)
+                        (find-clojure-var (symbol (name sym))))]
        @v
        (throw
         (ex-info
