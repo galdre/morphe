@@ -3,8 +3,10 @@
   (:require [morphe.core :as m :include-macros true]
             [morphe.test-helper-one :as one]
             [morphe.test-helper-three :as three]
+            #?(:clj [morphe.test-macros :as tm])
             #?(:clj [clojure.test :as t]
-               :cljs [cljs.test :as t :include-macros true])))
+               :cljs [cljs.test :as t :include-macros true]))
+  #?(:cljs (:require-macros [morphe.test-macros :as tm])))
 
 ;;;;;;;;;;;;;
 ;; ASPECTS ;;
@@ -379,3 +381,14 @@
 (t/deftest falsey-aspect-arguments-test
   (t/is (= [nil 1] (nil-labelled-fn 1)))
   (t/is (= [false 1] (false-labelled-fn 1))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ASPECT FORMS THAT ARE NOT LISTS ;;
+
+(def counter-3 (atom 0))
+(tm/defn-with-seq-aspects seq-aspect-fn [(counted `counter-3)]
+  [x] (inc x))
+
+(t/deftest seq-aspect-form-test
+  (t/is (= 2 (seq-aspect-fn 1)))
+  (t/is (= 1 @counter-3)))

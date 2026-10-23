@@ -7,14 +7,14 @@
   [aspect]
   (cond (symbol? aspect)
         (ns-resolve *ns* aspect)
-        (list? aspect)
+        (seq? aspect)
         (eval aspect)))
 
 (defn resolve-cljs-aspect
   [aspect name host-ns]
   (cond (symbol? aspect)
         (cljs/resolve-from-cljs aspect #{name} (ns-name host-ns))
-        (list? aspect)
+        (seq? aspect)
         (cljs/eval-from-cljs aspect
                              :ignoring #{name}
                              :cljs-ns (ns-name host-ns))))
