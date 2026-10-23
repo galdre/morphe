@@ -71,7 +71,9 @@
 (clojure.core/defn alter-bodies*
   "Takes a fn-def and a function of args [params body] and replaces each body
   in the fn-def with the result of applying the function to the params and
-  the body! body should be assumed to be a collection of valid expressions."
+  the body! body should be assumed to be a collection of valid expressions.
+  A :pre/:post condition map is not passed in body; it stays first in the
+  new body."
   {:style/indent 1}
   [fn-def f]
   (impl/alter-bodies* fn-def f))
@@ -86,6 +88,7 @@
     * &meta - The metadata attached to the fn name.
     * &env-keys - The keys of the &env map known to the `defn` macro.
   NOTA BENE: &body is an *ordered collection* of valid expressions.
+  It does not include a :pre/:post condition map; that stays first in the body.
   Example:
   (alter-bodies fn-def
                 `(binding [*scope* ~[(ns-name &ns) &name &arglist]]
@@ -96,14 +99,16 @@
 
 (clojure.core/defn prefix-bodies*
   "Takes a fn-def and a function of args [params] and prefixes each body
-  in the fn-def with the result of applying the function to the params!"
+  in the fn-def with the result of applying the function to the params!
+  The prefix goes after a :pre/:post condition map."
   {:style/indent 1}
   [fn-def f]
   (impl/prefix-bodies* fn-def f))
 
 (defmacro prefix-bodies
   "Allows the specification of an expression that will be added to the beginning
-  of each fn arity (presumably for side-effects). Provides:
+  of each fn arity (presumably for side-effects), after any :pre/:post
+  condition map. Provides:
     * &arglist - The paramaters corresponding to this arity.
     * &ns - The namespace in which this fn is being interned
     * &name - The symbol used to name this defn.

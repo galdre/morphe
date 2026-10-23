@@ -299,3 +299,61 @@
     (t/is (= '[10] @three/some-atom))
     (t/is (= 56 (one/logged-fn-2 8 7)))
     (t/is (= '[8 7] @three/some-atom))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; PRE- AND POST-CONDITION MAPS ;;
+
+(defn spied
+  [s]
+  (fn [fn-def]
+    (m/alter-bodies fn-def
+      `(let [r# (do ~@&body)]
+         (println (str ~s ": " r#))
+         r#))))
+
+(m/defn ^{::m/aspects [(spied "conditions")]}
+  alter-bodies-conditions-fn
+  ([x] {:pre [(pos? x)] :post [(< % 100)]} (* 2 x))
+  ([x y] {:pre [(pos? x)]} (+ x y)))
+
+(m/defn ^{::m/aspects [(counted `counter)]}
+  prefix-bodies-conditions-fn
+  ([x] {:pre [(pos? x)] :post [(< % 100)]} (* 2 x))
+  ([x y] {:pre [(pos? x)]} (+ x y)))
+
+(m/defn ^{::m/aspects [(counted `counter) (spied "conditions")]}
+  composed-conditions-fn
+  [x] {:pre [(pos? x)]} (* 2 x))
+
+(m/defn ^{::m/aspects [(spied "lone map")]}
+  lone-map-fn [x] {:pre x})
+
+(m/defn ^{::m/aspects [alter-bodies-phores]}
+  conditions-anaphores-fn [x] {:pre [(pos? x)]} (inc x))
+
+(t/deftest conditions-test
+  (t/testing "alter-bodies keeps the condition map"
+    (t/is (= 4 (alter-bodies-conditions-fn 2)))
+    (t/is (thrown? #?(:clj AssertionError :cljs js/Error)
+                   (with-out-str (alter-bodies-conditions-fn -2))))
+    (t/is (thrown? #?(:clj AssertionError :cljs js/Error)
+                   (with-out-str (alter-bodies-conditions-fn 60))))
+    (t/is (= 1 (alter-bodies-conditions-fn 2 -1)))
+    (t/is (thrown? #?(:clj AssertionError :cljs js/Error)
+                   (with-out-str (alter-bodies-conditions-fn -2 5)))))
+  (t/testing "prefix-bodies keeps the condition map"
+    (t/is (= 4 (prefix-bodies-conditions-fn 2)))
+    (t/is (thrown? #?(:clj AssertionError :cljs js/Error)
+                   (prefix-bodies-conditions-fn -2)))
+    (t/is (thrown? #?(:clj AssertionError :cljs js/Error)
+                   (prefix-bodies-conditions-fn 60)))
+    (t/is (thrown? #?(:clj AssertionError :cljs js/Error)
+                   (prefix-bodies-conditions-fn -2 5))))
+  (t/testing "Composed aspects keep the condition map"
+    (t/is (= "conditions: 4\n" (with-out-str (composed-conditions-fn 2))))
+    (t/is (thrown? #?(:clj AssertionError :cljs js/Error)
+                   (with-out-str (composed-conditions-fn -2)))))
+  (t/testing "A lone map is the return value, not a condition map"
+    (t/is (= "lone map: {:pre 3}\n" (with-out-str (lone-map-fn 3)))))
+  (t/testing "&body does not include the condition map"
+    (t/is (= '((inc x)) (:body (conditions-anaphores-fn 1))))))

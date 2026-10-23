@@ -217,12 +217,30 @@
                       `(do ~~expression
                            ~~'&form))))))
 
+;; As in clojure.core/fn: a map that starts a body is the condition map
+;; only when more forms follow it; a lone map is the return value.
+(defn- split-conditions
+  [body]
+  (if (and (map? (first body)) (next body))
+    [(first body) (rest body)]
+    [nil body]))
+
+(defn- with-conditions
+  [conditions body]
+  (if (and conditions (seq body))
+    (cons conditions body)
+    body))
+
 (defn alter-bodies*
   [fn-def f]
   (update fn-def
           :bodies
           (fn [bodies]
-            (map f (:arglists fn-def) bodies))))
+            (map (fn [params body]
+                   (let [[conditions body] (split-conditions body)]
+                     (with-conditions conditions (f params body))))
+                 (:arglists fn-def)
+                 bodies))))
 
 #?(:clj
    (defmacro alter-bodies
@@ -243,8 +261,10 @@
   (update fn-def
           :bodies
           (fn [bodies]
-            (map cons
-                 (map f (:arglists fn-def))
+            (map (fn [params body]
+                   (let [[conditions body] (split-conditions body)]
+                     (with-conditions conditions (cons (f params) body))))
+                 (:arglists fn-def)
                  bodies))))
 
 #?(:clj
