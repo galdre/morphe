@@ -357,3 +357,25 @@
     (t/is (= "lone map: {:pre 3}\n" (with-out-str (lone-map-fn 3)))))
   (t/testing "&body does not include the condition map"
     (t/is (= '((inc x)) (:body (conditions-anaphores-fn 1))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ASPECT ARGUMENTS THAT ARE FALSEY ;;
+
+(defn labelled
+  [label]
+  (fn [fn-def]
+    (m/alter-bodies fn-def
+      `[~label (do ~@&body)])))
+
+(def nil-label nil)
+(def false-label false)
+
+(m/defn ^{::m/aspects [(labelled nil-label)]}
+  nil-labelled-fn [x] x)
+
+(m/defn ^{::m/aspects [(labelled false-label)]}
+  false-labelled-fn [x] x)
+
+(t/deftest falsey-aspect-arguments-test
+  (t/is (= [nil 1] (nil-labelled-fn 1)))
+  (t/is (= [false 1] (false-labelled-fn 1))))

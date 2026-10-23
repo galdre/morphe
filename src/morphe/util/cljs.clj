@@ -15,13 +15,19 @@
   `(binding [env/*compiler* nil]
      ~@body))
 
-(defn find-clojure-variant
+(defn- find-clojure-var
   [ns sym]
   (try
     (not-targeting-cljs
       (require [ns])
-      @(ns-resolve ns sym))
+      (let [v (ns-resolve ns sym)]
+        (when (var? v) v)))
     (catch Throwable t nil)))
+
+(defn find-clojure-variant
+  [ns sym]
+  (when-let [v (find-clojure-var ns sym)]
+    @v))
 
 ;; Just to cover a few edge cases...but if these were run into
 ;; probably you're misusing the aspect constructors anyway.
@@ -30,33 +36,35 @@
 (defn resolve-from-cljs
   ([sym ignoring] (resolve-from-cljs sym ignoring ana/*cljs-ns*))
   ([sym ignoring cljs-ns]
-   (or (if (or (contains? special-forms sym)
-               (contains? ignoring sym))
-         sym
-         (if (simple-symbol? sym)
-           (if-let [anavar (anapi/ns-resolve cljs-ns sym)]
-             ;; It's in the namespace currently being compiled:
-             (find-clojure-variant cljs-ns sym)
-             ;; Presumably it's referred into this ns:
-             (when-let [ns (get-in @env/*compiler* [::ana/namespaces
-                                                    cljs-ns
-                                                    :uses
-                                                    sym])]
-               (find-clojure-variant ns sym)))
-           ;; it's namespaced, either in full or by alias:
-           (let [ns (symbol (namespace sym))
-                 n (symbol (name sym))
-                 ns-full (or ('#{clojure.core} ns)
-                             (get-in @env/*compiler* [::ana/namespaces
-                                                      cljs-ns
-                                                      :requires
-                                                      ns]))]
-             (find-clojure-variant ns-full n))))
+   (if (or (contains? special-forms sym)
+           (contains? ignoring sym))
+     sym
+     ;; A var can hold nil or false, so test the var, not its value:
+     (if-let [v (if (simple-symbol? sym)
+                  (if-let [anavar (anapi/ns-resolve cljs-ns sym)]
+                    ;; It's in the namespace currently being compiled:
+                    (find-clojure-var cljs-ns sym)
+                    ;; Presumably it's referred into this ns:
+                    (when-let [ns (get-in @env/*compiler* [::ana/namespaces
+                                                           cljs-ns
+                                                           :uses
+                                                           sym])]
+                      (find-clojure-var ns sym)))
+                  ;; it's namespaced, either in full or by alias:
+                  (let [ns (symbol (namespace sym))
+                        n (symbol (name sym))
+                        ns-full (or ('#{clojure.core} ns)
+                                    (get-in @env/*compiler* [::ana/namespaces
+                                                             cljs-ns
+                                                             :requires
+                                                             ns]))]
+                    (find-clojure-var ns-full n)))]
+       @v
        (throw
         (ex-info
          (format "%s is not resolvable from location %s."
                  sym cljs-ns)
-         {:ns cljs-ns :sym sym})))))
+         {:ns cljs-ns :sym sym}))))))
 
 (defn walk-all
   [pre post form]
