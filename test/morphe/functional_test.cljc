@@ -116,3 +116,11 @@
   (t/is (= 1 @three/some-atom))
   (t/is (= 56 (one/flogged-fn 8 7)))
   (t/is (= 2 @three/some-atom)))
+
+;;;;;;;;;;;;;;;
+;; ARGLISTS ;;
+
+;; cljs var metadata reports :arglists () for any f/defn, advised or not.
+#?(:clj
+   (t/deftest advised-arglists-test
+     (t/is (= '([x] [x y]) (:arglists (meta #'spied-fn))))))

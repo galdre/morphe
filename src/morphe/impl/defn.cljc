@@ -136,9 +136,7 @@
    (defn fn-def->defn
      [fn-def]
      ;; vvv some more bits forked out of clojure.core/defn.
-     (let [fn-def (cond-> fn-def
-                    (:hofs fn-def) (assoc-in fn-def [:metadata :arglists '([& args])]))
-           fn-expr (with-meta (cons `fn (map cons
+     (let [fn-expr (with-meta (cons `fn (map cons
                                              (:arglists fn-def)
                                              (:bodies fn-def)))
                      {:rettag (:tag (:metadata fn-def))})
